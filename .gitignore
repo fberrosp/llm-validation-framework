@@ -1,0 +1,20 @@
+# Virtual environment
+venv/
+
+# Environment variables / secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# DeepEval / generated files
+.deepeval/
+
+#vscode
+.vscode/
