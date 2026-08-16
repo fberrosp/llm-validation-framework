@@ -7,13 +7,13 @@ from get_query import get_rag_query
 
 
 def test_rag_pipeline():
-    question = "What is the paid sick leave policy?"
+    question = "What is the retirement plan policy?"
     answer, retrieved_context = get_rag_query(question)
 
     test_case = LLMTestCase(
         input=question,
         actual_output=answer,
-        expected_output="Full time employees earn 7 hours per month beginning at the start of their employment. Unused hours can accumulate up to 210 hours for full time employees.",
+        expected_output="The organization provides retirement plan for full time employees and part time employees who are 21 years or older. The organization contributes to the employees retirement plan after 1 year of employment. Employees may contribute to their plan at the start of their employment",
         retrieval_context=retrieved_context,
     )
 
