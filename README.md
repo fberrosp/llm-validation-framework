@@ -50,6 +50,7 @@ The framework is organized into two primary layers:
 The LLM is queried multiple times and the resulting outputs are evaluated
 using both custom Pytest assertions and DeepEval metrics.
 
+```mermaid
 flowchart TD
 A[Test Input / Prompt] --> B[LLM]
 B --> C[Generated Output]
@@ -64,11 +65,13 @@ B --> C[Generated Output]
 
     J[Adversarial Inputs] --> B
     J --> F
+```
 
 ### RAG Pipeline
 
 The RAG component loads a local knowledge base, splits it into chunks, generates embeddings, stores them in ChromaDB, and retrieves relevant documents before generating an answer.
 
+```mermaid
 flowchart LR
 A[knowledge_base.txt] --> B[TextLoader]
 B --> C[Document Chunking]
@@ -88,9 +91,11 @@ D --> E[(ChromaDB)]
     J --> L[Answer Relevancy]
     G --> M[Contextual Precision]
     G --> N[Contextual Recall]
+```
 
 ## Validation Flow
 
+```mermaid
 flowchart TD
 A[Code Change] --> B[Git Push / Pull Request]
 B --> C[GitHub Actions]
@@ -111,6 +116,7 @@ D --> E[Run Pytest / DeepEval]
 
     K -->|Yes| L[CI Pass]
     K -->|No| M[CI Failure / Investigation]
+```
 
 ## Project Structure
 
@@ -471,6 +477,7 @@ responses are probabilistic.
 
 ## Continuous Integration
 
+```mermaid
 flowchart LR
 A[Developer] --> B[git push]
 B --> C[GitHub Repository]
@@ -481,6 +488,7 @@ F --> G[Run Validation Suite]
 G --> H{Tests Pass?}
 H -->|Yes| I[Build / PR Approved]
 H -->|No| J[Failure Report]
+```
 
 The OpenAI API key is stored as a GitHub Actions repository secret rather
 than being committed to source control.
@@ -510,6 +518,7 @@ This framework therefore combines traditional Pytest assertions with
 LLM-as-a-judge metrics to evaluate both deterministic behavior and
 semantic properties.
 
+```mermaid
 flowchart TD
 A[Input] --> B[LLM / RAG Application]
 B --> C[Generated Output]
@@ -527,6 +536,7 @@ B --> C[Generated Output]
     H --> I
 
     I --> J[Pass / Fail]
+```
 
 Each evaluation produces a score that is compared against a defined
 threshold. Tests pass when the model's behavior meets the required
