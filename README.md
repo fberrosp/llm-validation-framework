@@ -10,9 +10,7 @@ factual correctness, output consistency, robustness to malformed and
 adversarial inputs, answer relevancy, hallucination/faithfulness, and
 RAG retrieval quality.
 
-The project is designed as a practical demonstration of AI/ML test
-automation and continuous validation practices relevant to production
-and on-device generative AI systems.
+The project demonstrates AI/ML test automation and continuous validation practices for generative AI applications.
 
 ## Stack
 
@@ -26,17 +24,17 @@ and on-device generative AI systems.
 
 ## What This Tests
 
-| Category                     | Covered | Method                                    |
-| ---------------------------- | :-----: | ----------------------------------------- |
-| Factual correctness          |   ✅    | GEval                                     |
-| Output consistency           |   ✅    | GEval, repeated sampling                  |
-| Edge-case / malformed input  |   ✅    | Parametrized Pytest                       |
-| Prompt injection resistance  |   ✅    | Adversarial input test                    |
-| Answer relevancy             |   ✅    | DeepEval built-in metric                  |
-| Hallucination / faithfulness |   ✅    | DeepEval built-in metric                  |
-| RAG retrieval quality        |   ✅    | Faithfulness, Contextual Precision/Recall |
-| Multimodal (image/audio)     |   ❌    | Future work                               |
-| Agentic multi-step reasoning |   ❌    | Future work                               |
+| Category                     | Covered | Method                      |
+| ---------------------------- | :-----: | --------------------------- |
+| Factual correctness          |   ✅    | GEval                       |
+| Output consistency           |   ✅    | GEval, repeated sampling    |
+| Edge-case / malformed input  |   ✅    | Parametrized Pytest         |
+| Prompt injection resistance  |   ✅    | Adversarial input test      |
+| Answer relevancy             |   ✅    | DeepEval built-in metric    |
+| Hallucination / faithfulness |   ✅    | DeepEval FaithfulnessMetric |
+| RAG retrieval quality        |   ✅    | Contextual Precision/Recall |
+| Multimodal (image/audio)     |   ❌    | Future work                 |
+| Agentic multi-step reasoning |   ❌    | Future work                 |
 
 ## Architecture
 
@@ -51,75 +49,56 @@ The LLM is queried multiple times and the resulting outputs are evaluated
 using both custom Pytest assertions and DeepEval metrics.
 
 ```mermaid
-flowchart TD
-A[Test Input / Prompt] --> B[LLM]
-B --> C[Generated Output]
+flowchart LR
+    A[Input] --> B[LLM]
+    B --> C[Output]
 
-    C --> D[Factual Correctness]
-    C --> E[Answer Relevancy]
-    C --> F[Robustness]
+    C --> D[Correctness]
+    C --> E[Relevancy]
+    A --> F[Robustness]
 
-    A --> G[Repeated Sampling]
-    G --> H[Multiple Outputs]
-    H --> I[Consistency Evaluation]
-
-    J[Adversarial Inputs] --> B
-    J --> F
+    B --> G[Repeated Outputs]
+    G --> H[Consistency]
 ```
 
 ### RAG Pipeline
 
-The RAG component loads a local knowledge base, splits it into chunks, generates embeddings, stores them in ChromaDB, and retrieves relevant documents before generating an answer.
+The RAG pipeline first converts the local knowledge base into embedded document chunks stored in ChromaDB. When a question is received, the retriever searches for relevant chunks, which are added to the prompt before the LLM generates an answer.
 
 ```mermaid
 flowchart LR
-A[knowledge_base.txt] --> B[TextLoader]
-B --> C[Document Chunking]
-C --> D[OpenAI Embeddings]
-D --> E[(ChromaDB)]
+    A[Knowledge Base] --> B[Chunk Documents]
+    B --> C[Generate Embeddings]
+    C --> D[(ChromaDB)]
 
-    Q[User Question] --> F[Retriever]
-    E --> F
-    F --> G[Relevant Context]
-
-    Q --> H[Prompt Construction]
-    G --> H
-    H --> I[LLM]
-    I --> J[Generated Answer]
-
-    J --> K[Faithfulness]
-    J --> L[Answer Relevancy]
-    G --> M[Contextual Precision]
-    G --> N[Contextual Recall]
+    Q[User Question] --> E[Retrieve Relevant Chunks]
+    D --> E
+    E --> F[Build Prompt]
+    Q --> F
+    F --> G[LLM]
+    G --> H[Answer]
 ```
+
+The resulting answer and retrieved context are then evaluated using DeepEval metrics for faithfulness, relevancy, and retrieval quality.
 
 ## Validation Flow
 
+Every code change triggers the validation suite through GitHub Actions. The pipeline installs the project dependencies, runs the tests, and reports whether the suite passes or fails.
+
 ```mermaid
 flowchart TD
-A[Code Change] --> B[Git Push / Pull Request]
-B --> C[GitHub Actions]
-C --> D[Install Dependencies]
-D --> E[Run Pytest / DeepEval]
+    A[Code Change] --> B[Push / Pull Request]
+    B --> C[GitHub Actions]
+    C --> D[Run Test Suite]
+    D --> E{All Tests Pass?}
 
-    E --> F[Correctness]
-    E --> G[Consistency]
-    E --> H[Robustness]
-    E --> I[Relevancy]
-    E --> J[RAG Evaluation]
-
-    F --> K{All Tests Pass?}
-    G --> K
-    H --> K
-    I --> K
-    J --> K
-
-    K -->|Yes| L[CI Pass]
-    K -->|No| M[CI Failure / Investigation]
+    E -->|Yes| F[CI Pass]
+    E -->|No| G[CI Failure]
 ```
 
 ## Project Structure
 
+```text
 llm-validation-framework/
 │
 ├── knowledge_base.txt
@@ -135,36 +114,22 @@ llm-validation-framework/
 ├── test_rag.py
 │
 ├── .github/
-│ └── workflows/
-│ └── llm-validation.yml
+│   └── workflows/
+│       └── llm-validation.yml
 │
 └── README.md
+```
 
 ## Core Components
 
-- get_response.py
-  Provides the interface used to send prompts to the OpenAI model and retrieve generated responses.
-
-- get_query.py
-  Implements the RAG query pipeline. It loads the knowledge base, creates document embeddings, retrieves relevant context, and passes the context to the LLM.
-
-- knowledge_base.txt
-  A self-contained fictional product/policy knowledge base used to test retrieval and grounded generation without relying on external documents.
-
-- test_correctness.py
-  Uses DeepEval's GEval metric to evaluate whether an LLM response is factually correct relative to an expected answer.
-
-- test_consistency.py
-  Samples the model multiple times using the same prompt and evaluates whether the resulting outputs remain semantically consistent.
-
-- test_robustness.py
-  Uses parametrized Pytest cases to evaluate behavior with empty input, nonsensical input, unusually long input, and adversarial prompt-injection attempts.
-
-- test_relevancy.py
-  Uses DeepEval's AnswerRelevancyMetric to determine whether generated responses appropriately address the user's question.
-
-- test_rag.py
-  Evaluates the RAG pipeline using faithfulness, contextual precision, contextual recall, and answer relevancy metrics.
+- **get_response.py** - Sends prompts to OpenAI and returns the model response.
+- **get_query.py** - Runs the RAG pipeline: loads the knowledge base, creates embeddings, retrieves relevant context, and generates an answer.
+- **knowledge_base.txt** - Fictional product and policy documentation used as the RAG knowledge base.
+- **test_correctness.py** - Uses DeepEval's GEval metric to evaluate factual correctness.
+- **test_consistency.py** - Runs the same prompt multiple times and evaluates whether the responses remain semantically consistent.
+- **test_robustness.py** - Tests empty, malformed, unusually long, and adversarial inputs.
+- **test_relevancy.py** - Uses DeepEval's AnswerRelevancyMetric to evaluate whether responses address the user's question.
+- **test_rag.py** - Evaluates the RAG pipeline using faithfulness, contextual precision, contextual recall, and answer relevancy.
 
 ## How to Run
 
@@ -198,7 +163,7 @@ source venv/bin/activate
 #### Windows
 
 ```PowerShell
-source venv/bin/activate
+.\venv\Scripts\Activate.ps1
 ```
 
 ### 3. Install dependencies
@@ -472,26 +437,23 @@ The water cycle is the continuous movement of water through evaporation, condens
 
 ```
 
-The exact scores and execution time will vary because LLM-generated
-responses are probabilistic.
+The exact scores and execution time vary because LLM-generated responses are probabilistic.
 
 ## Continuous Integration
 
 ```mermaid
 flowchart LR
-A[Developer] --> B[git push]
-B --> C[GitHub Repository]
-C --> D[GitHub Actions]
-D --> E[Install Dependencies]
-E --> F[Configure API Key]
-F --> G[Run Validation Suite]
-G --> H{Tests Pass?}
-H -->|Yes| I[Build / PR Approved]
-H -->|No| J[Failure Report]
+    A[Code Change] --> B[Push / Pull Request]
+    B --> C[GitHub Actions]
+    C --> D[Install Dependencies]
+    D --> E[Run Validation Suite]
+    E --> F{Tests Pass?}
+
+    F -->|Yes| G[CI Pass]
+    F -->|No| H[CI Failure]
 ```
 
-The OpenAI API key is stored as a GitHub Actions repository secret rather
-than being committed to source control.
+The OpenAI API key is stored as a GitHub Actions repository secret and is passed to the test environment at runtime. It is not committed to the repository.
 
 ```yaml
 env:
@@ -503,44 +465,46 @@ exposing credentials in the repository.
 
 ## Evaluation Philosophy
 
-LLM applications require a combination of traditional software testing
-and semantic evaluation.
+LLM applications need both traditional software tests and semantic
+evaluation.
 
-Traditional assertions are effective for deterministic properties such
-as whether an output exists, whether an API returns successfully, or
-whether an application handles malformed input.
+Pytest assertions work well for deterministic behavior, such as checking
+that a response is returned or that invalid input is handled correctly.
+For LLM outputs, however, exact string matching is often too strict.
+Different responses can use different wording while conveying the same
+meaning.
 
-However, LLM outputs are probabilistic. Two responses can use different
-wording or structure while still being equally correct. This makes
-exact string comparison insufficient for many LLM behaviors.
-
-This framework therefore combines traditional Pytest assertions with
-LLM-as-a-judge metrics to evaluate both deterministic behavior and
-semantic properties.
+This framework uses Pytest for deterministic checks and DeepEval for
+semantic evaluation.
 
 ```mermaid
 flowchart TD
-A[Input] --> B[LLM / RAG Application]
-B --> C[Generated Output]
+    A[Input] --> B[LLM / RAG Application]
+    B --> C[Output]
 
-    C --> D[Correctness]
-    C --> E[Consistency]
-    C --> F[Relevancy]
-    C --> G[Robustness]
-    C --> H[RAG Quality]
+    C --> D[Pytest Assertions]
+    C --> E[DeepEval Metrics]
 
-    D --> I[Evaluation]
-    E --> I
-    F --> I
-    G --> I
-    H --> I
+    D --> F[Test Result]
+    E --> F
 
-    I --> J[Pass / Fail]
+    F --> G{Pass?}
 ```
 
-Each evaluation produces a score that is compared against a defined
-threshold. Tests pass when the model's behavior meets the required
-quality level and fail when it does not.
+Pytest handles deterministic checks, while DeepEval evaluates properties
+such as correctness, consistency, relevancy, and RAG quality. Each metric
+is compared against a defined threshold to determine whether the test
+passes.
 
-This approach allows the framework to test both conventional software
-behavior and characteristics specific to generative AI systems.
+This combination provides coverage for both traditional application
+behavior and the probabilistic nature of LLM outputs.
+
+## Future Work
+
+Potential extensions include:
+
+- Multimodal validation for image and audio inputs/outputs
+- Agentic workflow and multi-step reasoning tests
+- Latency and performance profiling
+- Expanded adversarial and prompt-injection testing
+- Additional retrieval and hallucination metrics
